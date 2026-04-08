@@ -3,137 +3,80 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Wallet</title>
+    <title>Chytrá Peněženka</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
-        :root {
-            --primary: #4f46e5;
-            --success: #10b981;
-            --danger: #ef4444;
-            --bg: #f8fafc;
-        }
-
-        body {
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--bg);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-        }
-
-        .card {
-            background: white;
-            padding: 2rem;
-            border-radius: 20px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-            width: 100%;
-            max-width: 350px;
-            text-align: center;
-        }
-
-        h2 { color: #64748b; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem; }
-
-        .balance-container {
-            font-size: 2.5rem;
-            font-weight: 800;
-            color: #1e293b;
-            margin-bottom: 2rem;
-            transition: transform 0.2s;
-        }
-
-        .input-group {
-            margin-bottom: 1.5rem;
-        }
-
-        input {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #e2e8f0;
-            border-radius: 12px;
-            font-size: 1rem;
-            box-sizing: border-box;
-            outline: none;
-            transition: border-color 0.2s;
-            text-align: center;
-        }
-
-        input:focus { border-color: var(--primary); }
-
-        .actions {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-        }
-
-        button {
-            padding: 12px;
-            border: none;
-            border-radius: 12px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: opacity 0.2s, transform 0.1s;
-            color: white;
-        }
-
+        :root { --primary: #4f46e5; --success: #10b981; --danger: #ef4444; --bg: #f1f5f9; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .card { background: white; padding: 2.5rem; border-radius: 30px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.15); width: 90%; max-width: 380px; text-align: center; }
+        h2 { color: #64748b; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 0.5rem; }
+        #total { font-size: 3.2rem; font-weight: 800; color: #1e293b; margin-bottom: 2rem; display: block; }
+        input { width: 100%; padding: 16px; border: 2px solid #e2e8f0; border-radius: 18px; font-size: 1.2rem; text-align: center; outline: none; transition: 0.3s; background: #f8fafc; margin-bottom: 1.5rem; box-sizing: border-box; }
+        input:focus { border-color: var(--primary); background: white; }
+        .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        button { padding: 16px; border: none; border-radius: 16px; font-weight: 700; cursor: pointer; color: white; font-size: 1rem; transition: transform 0.1s; text-transform: uppercase; }
         button:active { transform: scale(0.95); }
-
-        .btn-add { background-color: var(--success); }
-        .btn-sub { background-color: var(--danger); }
-
-        /* Malý efekt při změně čísla */
-        .bump { transform: scale(1.1); color: var(--primary); }
+        .btn-add { background: var(--success); }
+        .btn-sub { background: var(--danger); }
     </style>
 </head>
 <body>
 
     <div class="card">
-        <h2>Váš aktuální zůstatek</h2>
-        <div class="balance-container" id="display">
-            <span id="total">0</span> Kč
-        </div>
-
-        <div class="input-group">
-            <input type="number" id="amount" placeholder="0.00" step="any">
-        </div>
-
+        <h2>Aktuální stav účtu</h2>
+        <span id="total">Načítám...</span>
+        <input type="number" id="amount" placeholder="Zadejte částku" inputmode="decimal">
         <div class="actions">
-            <button class="btn-sub" onclick="updateBalance(false)">− Výdaj</button>
-            <button class="btn-add" onclick="updateBalance(true)">+ Příjem</button>
+            <button class="btn-sub" onclick="update(false)">− Výdaj</button>
+            <button class="btn-add" onclick="update(true)">+ Příjem</button>
         </div>
     </div>
 
     <script>
+        // Konfigurace z Vašeho projektu Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyAInlFG4VGt64JG7tXMK9Fkq5HgRmwO8RU",
+            authDomain: "zustatek-uctu.firebaseapp.com",
+            databaseURL: "https://zustatek-uctu-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "zustatek-uctu",
+            storageBucket: "zustatek-uctu.firebasestorage.app",
+            messagingSenderId: "251250690938",
+            appId: "1:251250690938:web:7fe466982ae39bdb56e4c3",
+            measurementId: "G-YX52FPBFJ5"
+        };
+
+        // Inicializace Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database().ref('zustatek');
         let currentBalance = 0;
-        const totalEl = document.getElementById('total');
-        const displayEl = document.getElementById('display');
 
-        function updateBalance(isAdding) {
+        // Načítání a synchronizace dat v reálném čase
+        db.on('value', (snapshot) => {
+            currentBalance = snapshot.val() || 0;
+            document.getElementById('total').innerText = currentBalance.toLocaleString('cs-CZ') + ' Kč';
+        });
+
+        // Funkce pro odeslání dat do cloudu
+        function update(isAdding) {
             const input = document.getElementById('amount');
-            const amount = parseFloat(input.value);
-
-            if (isNaN(amount) || amount <= 0) return;
-
-            if (isAdding) {
-                currentBalance += amount;
-            } else {
-                currentBalance -= amount;
+            const val = parseFloat(input.value);
+            
+            if (isNaN(val) || val <= 0) {
+                alert("Prosím zadejte platné číslo.");
+                return;
             }
 
-            // Animace textu
-            displayEl.classList.add('bump');
-            setTimeout(() => displayEl.classList.remove('bump'), 200);
-
-            // Formátování a zápis
-            totalEl.innerText = currentBalance.toLocaleString('cs-CZ', {
-                minimumFractionDigits: 0,
-                maximumFractionDigits: 2
-            });
+            const newBalance = isAdding ? currentBalance + val : currentBalance - val;
             
-            input.value = '';
-            input.focus();
+            // Zápis do Firebase
+            db.set(newBalance).then(() => {
+                input.value = '';
+                input.focus();
+            }).catch((error) => {
+                console.error("Chyba při zápisu: ", error);
+            });
         }
     </script>
-
 </body>
 </html>
