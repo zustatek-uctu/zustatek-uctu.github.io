@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Wallet</title>
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --success: #10b981;
+            --danger: #ef4444;
+            --bg: #f8fafc;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .card {
+            background: white;
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 350px;
+            text-align: center;
+        }
+
+        h2 { color: #64748b; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem; }
+
+        .balance-container {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: #1e293b;
+            margin-bottom: 2rem;
+            transition: transform 0.2s;
+        }
+
+        .input-group {
+            margin-bottom: 1.5rem;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 1rem;
+            box-sizing: border-box;
+            outline: none;
+            transition: border-color 0.2s;
+            text-align: center;
+        }
+
+        input:focus { border-color: var(--primary); }
+
+        .actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        button {
+            padding: 12px;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.1s;
+            color: white;
+        }
+
+        button:active { transform: scale(0.95); }
+
+        .btn-add { background-color: var(--success); }
+        .btn-sub { background-color: var(--danger); }
+
+        /* Malý efekt při změně čísla */
+        .bump { transform: scale(1.1); color: var(--primary); }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h2>Váš aktuální zůstatek</h2>
+        <div class="balance-container" id="display">
+            <span id="total">0</span> Kč
+        </div>
+
+        <div class="input-group">
+            <input type="number" id="amount" placeholder="0.00" step="any">
+        </div>
+
+        <div class="actions">
+            <button class="btn-sub" onclick="updateBalance(false)">− Výdaj</button>
+            <button class="btn-add" onclick="updateBalance(true)">+ Příjem</button>
+        </div>
+    </div>
+
+    <script>
+        let currentBalance = 0;
+        const totalEl = document.getElementById('total');
+        const displayEl = document.getElementById('display');
+
+        function updateBalance(isAdding) {
+            const input = document.getElementById('amount');
+            const amount = parseFloat(input.value);
+
+            if (isNaN(amount) || amount <= 0) return;
+
+            if (isAdding) {
+                currentBalance += amount;
+            } else {
+                currentBalance -= amount;
+            }
+
+            // Animace textu
+            displayEl.classList.add('bump');
+            setTimeout(() => displayEl.classList.remove('bump'), 200);
+
+            // Formátování a zápis
+            totalEl.innerText = currentBalance.toLocaleString('cs-CZ', {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 2
+            });
+            
+            input.value = '';
+            input.focus();
+        }
+    </script>
+
+</body>
+</html>
